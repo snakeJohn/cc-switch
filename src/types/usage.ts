@@ -199,6 +199,7 @@ export const KNOWN_APP_TYPES: ReadonlyArray<AppType> = [
 export const CACHE_INCLUSIVE_APP_TYPES: ReadonlySet<string> = new Set([
   "codex",
   "gemini",
+  "grok",
 ]);
 
 /** Subset of request-log fields needed to derive cache-normalized input. */
