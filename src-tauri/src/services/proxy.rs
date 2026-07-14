@@ -2857,7 +2857,7 @@ impl ProxyService {
             .map_err(|e| format!("写入 Grok 接管配置失败: {e}"))
     }
 
-    async fn sync_grok_live_from_provider_while_proxy_active(
+    pub async fn sync_grok_live_from_provider_while_proxy_active(
         &self,
         provider: &Provider,
     ) -> Result<(), String> {

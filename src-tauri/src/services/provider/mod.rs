@@ -2341,6 +2341,15 @@ impl ProviderService {
                                 .sync_codex_live_from_provider_while_proxy_active(&provider),
                         )
                         .map_err(|e| AppError::Message(format!("同步 Codex Live 配置失败: {e}")))?;
+                    } else if live_taken_over && matches!(app_type, AppType::Grok) {
+                        // Keep takeover-owned ~/.grok/config.toml in sync when
+                        // the current Grok provider is edited (model / backend).
+                        futures::executor::block_on(
+                            state
+                                .proxy_service
+                                .sync_grok_live_from_provider_while_proxy_active(&provider),
+                        )
+                        .map_err(|e| AppError::Message(format!("同步 Grok Live 配置失败: {e}")))?;
                     }
                 }
             } else {
@@ -2527,14 +2536,16 @@ impl ProviderService {
         // restore backup. Serialize them per app, then decide from the locked
         // current state so a just-started takeover cannot be overwritten by a
         // normal live write.
-        let _switch_guard =
-            if matches!(app_type, AppType::Claude | AppType::Codex | AppType::Gemini) {
-                Some(futures::executor::block_on(
-                    state.proxy_service.lock_switch_for_app(app_type.as_str()),
-                ))
-            } else {
-                None
-            };
+        let _switch_guard = if matches!(
+            app_type,
+            AppType::Claude | AppType::Codex | AppType::Gemini | AppType::Grok
+        ) {
+            Some(futures::executor::block_on(
+                state.proxy_service.lock_switch_for_app(app_type.as_str()),
+            ))
+        } else {
+            None
+        };
 
         // Backup or live placeholders mean the live file is owned by proxy
         // takeover, even if the proxy server is temporarily stopped or is in the
