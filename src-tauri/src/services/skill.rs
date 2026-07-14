@@ -544,11 +544,8 @@ impl SkillService {
         }
 
         // 默认路径：回退到用户主目录下的标准位置
-        let home = dirs::home_dir().context(format_skill_error(
-            "GET_HOME_DIR_FAILED",
-            &[],
-            Some("checkPermission"),
-        ))?;
+        // 使用 get_home_dir() 以尊重 CC_SWITCH_TEST_HOME（Windows 测试隔离）
+        let home = crate::config::get_home_dir();
 
         Ok(match app {
             AppType::Claude => home.join(".claude").join("skills"),
@@ -558,7 +555,7 @@ impl SkillService {
             AppType::OpenCode => home.join(".config").join("opencode").join("skills"),
             AppType::OpenClaw => home.join(".openclaw").join("skills"),
             AppType::Hermes => crate::hermes_config::get_hermes_dir().join("skills"),
-            AppType::Grok => home.join(".grok").join("skills"),
+            AppType::Grok => crate::grok_config::get_grok_dir().join("skills"),
         })
     }
 
