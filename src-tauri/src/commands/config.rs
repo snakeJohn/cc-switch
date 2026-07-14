@@ -126,6 +126,17 @@ pub async fn get_config_status(
 
             Ok(ConfigStatus { exists, path })
         }
+        AppType::Grok => {
+            // P1: provisional ~/.grok until grok_config lands
+            let path = dirs::home_dir()
+                .map(|h| h.join(".grok"))
+                .unwrap_or_else(|| std::path::PathBuf::from(".grok"));
+            let exists = path.exists();
+            Ok(ConfigStatus {
+                exists,
+                path: path.to_string_lossy().to_string(),
+            })
+        }
     }
 }
 
@@ -146,6 +157,10 @@ pub async fn get_config_dir(app: String) -> Result<String, String> {
         AppType::OpenCode => crate::opencode_config::get_opencode_dir(),
         AppType::OpenClaw => crate::openclaw_config::get_openclaw_dir(),
         AppType::Hermes => crate::hermes_config::get_hermes_dir(),
+        // P1: provisional ~/.grok until grok_config lands
+        AppType::Grok => dirs::home_dir()
+            .map(|h| h.join(".grok"))
+            .unwrap_or_else(|| std::path::PathBuf::from(".grok")),
     };
 
     Ok(dir.to_string_lossy().to_string())
@@ -163,6 +178,10 @@ pub async fn open_config_folder(handle: AppHandle, app: String) -> Result<bool, 
         AppType::OpenCode => crate::opencode_config::get_opencode_dir(),
         AppType::OpenClaw => crate::openclaw_config::get_openclaw_dir(),
         AppType::Hermes => crate::hermes_config::get_hermes_dir(),
+        // P1: provisional ~/.grok until grok_config lands
+        AppType::Grok => dirs::home_dir()
+            .map(|h| h.join(".grok"))
+            .unwrap_or_else(|| std::path::PathBuf::from(".grok")),
     };
 
     if !config_dir.exists() {

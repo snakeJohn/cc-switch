@@ -199,6 +199,8 @@ impl Provider {
                 );
                 (base_url, api_key)
             }
+            // P1: Grok live/auth extraction lands with grok_config; keep empty credentials.
+            AppType::Grok => (String::new(), String::new()),
         };
 
         // Normalize like the JS-script path (extract_base_url_from_provider) so a

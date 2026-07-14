@@ -2996,6 +2996,7 @@ impl ProviderService {
             AppType::OpenCode => Self::extract_opencode_common_config(&provider.settings_config),
             AppType::OpenClaw => Self::extract_openclaw_common_config(&provider.settings_config),
             AppType::Hermes => Ok(String::new()), // Hermes doesn't use common config snippets
+            AppType::Grok => Ok(String::new()),   // P1: Grok common config not used yet
         }
     }
 
@@ -3012,6 +3013,7 @@ impl ProviderService {
             AppType::OpenCode => Self::extract_opencode_common_config(settings_config),
             AppType::OpenClaw => Self::extract_openclaw_common_config(settings_config),
             AppType::Hermes => Ok(String::new()), // Hermes doesn't use common config snippets
+            AppType::Grok => Ok(String::new()),   // P1: Grok common config not used yet
         }
     }
 
@@ -3511,6 +3513,16 @@ impl ProviderService {
                     ));
                 }
             }
+            AppType::Grok => {
+                // P1: accept any JSON object until grok_config validation lands
+                if !provider.settings_config.is_object() {
+                    return Err(AppError::localized(
+                        "provider.grok.settings.not_object",
+                        "Grok 配置必须是 JSON 对象",
+                        "Grok configuration must be a JSON object",
+                    ));
+                }
+            }
         }
 
         // Validate and clean UsageScript configuration (common for all app types)
@@ -3716,6 +3728,14 @@ impl ProviderService {
                     .to_string();
 
                 Ok((api_key, base_url))
+            }
+            AppType::Grok => {
+                // P1: credential extraction lands with grok_config
+                Err(AppError::localized(
+                    "provider.grok.credentials.unsupported",
+                    "Grok 凭据提取尚未实现",
+                    "Grok credential extraction is not implemented yet",
+                ))
             }
         }
     }

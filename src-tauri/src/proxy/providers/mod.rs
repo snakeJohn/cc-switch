@@ -196,6 +196,8 @@ impl ProviderType {
                 // These apps don't support proxy, fallback to Codex-like type
                 ProviderType::Codex
             }
+            // P1: Grok proxy lands in P3; treat like Codex for now
+            AppType::Grok => ProviderType::Codex,
         }
     }
 
@@ -250,6 +252,8 @@ pub fn get_adapter(app_type: &AppType) -> Box<dyn ProviderAdapter> {
             // These apps don't support proxy, fallback to Codex adapter
             Box::new(CodexAdapter::new())
         }
+        // P1: Grok proxy lands in P3; reuse Codex adapter for compile completeness
+        AppType::Grok => Box::new(CodexAdapter::new()),
     }
 }
 

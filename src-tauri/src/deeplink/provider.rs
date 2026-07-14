@@ -148,6 +148,8 @@ pub(crate) fn build_provider_from_request(
         AppType::OpenCode => build_opencode_settings(request),
         AppType::OpenClaw => build_additive_app_settings(request),
         AppType::Hermes => build_hermes_settings(request),
+        // P1: provisional shape until dedicated Grok deeplink builder lands
+        AppType::Grok => build_codex_settings(request),
     };
 
     // Build usage script configuration if provided

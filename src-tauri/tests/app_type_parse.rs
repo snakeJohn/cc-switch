@@ -20,3 +20,12 @@ fn parse_unknown_app_returns_localized_error_message() {
     assert!(msg.contains("可选值") || msg.contains("Allowed"));
     assert!(msg.contains("unknown"));
 }
+
+#[test]
+fn parse_grok_app_ids() {
+    assert!(matches!(AppType::from_str("grok"), Ok(AppType::Grok)));
+    assert!(matches!(AppType::from_str("GROK"), Ok(AppType::Grok)));
+    assert!(matches!(AppType::from_str("grok-build"), Ok(AppType::Grok)));
+    assert!(!AppType::Grok.is_additive_mode());
+    assert_eq!(AppType::Grok.as_str(), "grok");
+}

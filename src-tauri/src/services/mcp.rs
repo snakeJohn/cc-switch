@@ -43,6 +43,9 @@ impl McpService {
         if prev_apps.hermes && !server.apps.hermes {
             Self::remove_server_from_app(state, &server.id, &AppType::Hermes)?;
         }
+        if prev_apps.grok && !server.apps.grok {
+            Self::remove_server_from_app(state, &server.id, &AppType::Grok)?;
+        }
 
         // 同步到各个启用的应用
         Self::sync_server_to_apps(state, &server)?;
@@ -137,6 +140,10 @@ impl McpService {
             AppType::Hermes => {
                 mcp::sync_single_server_to_hermes(&Default::default(), &server.id, &server.server)?;
             }
+            AppType::Grok => {
+                // P1: Grok MCP sync lands in P2
+                log::debug!("Grok MCP support not implemented yet, skipping sync");
+            }
         }
         Ok(())
     }
@@ -171,6 +178,10 @@ impl McpService {
             }
             AppType::Hermes => {
                 mcp::remove_server_from_hermes(id)?;
+            }
+            AppType::Grok => {
+                // P1: Grok MCP remove lands in P2
+                log::debug!("Grok MCP support not implemented yet, skipping remove");
             }
         }
         Ok(())
