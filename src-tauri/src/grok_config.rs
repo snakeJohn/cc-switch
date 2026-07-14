@@ -45,6 +45,116 @@ pub fn get_grok_auth_path() -> PathBuf {
     get_grok_dir().join("auth.json")
 }
 
+/// Lightweight official-auth status (no OAuth). Never includes tokens.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GrokAuthStatus {
+    /// True when `auth.json` exists and has at least one non-empty credential entry.
+    pub authenticated: bool,
+    /// Resolved path to `auth.json`.
+    pub auth_path: String,
+    /// Whether the auth.json file exists on disk.
+    pub auth_file_exists: bool,
+    /// Optional email from the first OIDC entry (if present).
+    pub email: Option<String>,
+    /// Optional expiry (`expires_at`) from the first entry.
+    pub expires_at: Option<String>,
+    /// Hint for UI: run CLI login locally (no in-app OAuth).
+    pub login_hint: String,
+}
+
+/// Read Grok official login status from `auth.json` without validating tokens remotely.
+pub fn get_grok_auth_status() -> GrokAuthStatus {
+    get_grok_auth_status_at(&get_grok_auth_path())
+}
+
+/// Testable path-based status reader.
+pub fn get_grok_auth_status_at(auth_path: &Path) -> GrokAuthStatus {
+    let path_str = auth_path.to_string_lossy().to_string();
+    let login_hint = "请运行 grok login".to_string();
+
+    if !auth_path.is_file() {
+        return GrokAuthStatus {
+            authenticated: false,
+            auth_path: path_str,
+            auth_file_exists: false,
+            email: None,
+            expires_at: None,
+            login_hint,
+        };
+    }
+
+    let content = match fs::read_to_string(auth_path) {
+        Ok(c) => c,
+        Err(_) => {
+            return GrokAuthStatus {
+                authenticated: false,
+                auth_path: path_str,
+                auth_file_exists: true,
+                email: None,
+                expires_at: None,
+                login_hint,
+            };
+        }
+    };
+
+    let value: Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(_) => {
+            return GrokAuthStatus {
+                authenticated: false,
+                auth_path: path_str,
+                auth_file_exists: true,
+                email: None,
+                expires_at: None,
+                login_hint,
+            };
+        }
+    };
+
+    let mut email = None;
+    let mut expires_at = None;
+    let mut authenticated = false;
+
+    if let Some(map) = value.as_object() {
+        for entry in map.values() {
+            let has_key = entry
+                .get("key")
+                .and_then(|v| v.as_str())
+                .is_some_and(|s| !s.is_empty());
+            let has_refresh = entry
+                .get("refresh_token")
+                .and_then(|v| v.as_str())
+                .is_some_and(|s| !s.is_empty());
+            if has_key || has_refresh {
+                authenticated = true;
+                if email.is_none() {
+                    email = entry
+                        .get("email")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                if expires_at.is_none() {
+                    expires_at = entry
+                        .get("expires_at")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                break;
+            }
+        }
+    }
+
+    GrokAuthStatus {
+        authenticated,
+        auth_path: path_str,
+        auth_file_exists: true,
+        email,
+        expires_at,
+        login_hint,
+    }
+}
+
 // ============================================================================
 // Public write API
 // ============================================================================
@@ -917,5 +1027,41 @@ default = "old"
             auth.ends_with("auth.json") || auth.file_name().map(|n| n == "auth.json").unwrap_or(false)
         );
         assert_eq!(GROK_ACTIVE_MODEL_ID, "cc-switch-active");
+    }
+
+    #[test]
+    fn auth_status_missing_file_is_unauthenticated() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("auth.json");
+        let status = get_grok_auth_status_at(&path);
+        assert!(!status.authenticated);
+        assert!(!status.auth_file_exists);
+        assert_eq!(status.login_hint, "请运行 grok login");
+    }
+
+    #[test]
+    fn auth_status_reads_email_without_exposing_tokens() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("auth.json");
+        fs::write(
+            &path,
+            r#"{
+              "https://auth.x.ai::client": {
+                "key": "secret-access-token",
+                "refresh_token": "secret-refresh",
+                "email": "user@example.com",
+                "expires_at": "2026-07-15T04:42:19Z"
+              }
+            }"#,
+        )
+        .unwrap();
+        let status = get_grok_auth_status_at(&path);
+        assert!(status.authenticated);
+        assert!(status.auth_file_exists);
+        assert_eq!(status.email.as_deref(), Some("user@example.com"));
+        assert_eq!(status.expires_at.as_deref(), Some("2026-07-15T04:42:19Z"));
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(!json.contains("secret-access-token"));
+        assert!(!json.contains("secret-refresh"));
     }
 }

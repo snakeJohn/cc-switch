@@ -127,10 +127,7 @@ pub async fn get_config_status(
             Ok(ConfigStatus { exists, path })
         }
         AppType::Grok => {
-            // P1: provisional ~/.grok until grok_config lands
-            let path = dirs::home_dir()
-                .map(|h| h.join(".grok"))
-                .unwrap_or_else(|| std::path::PathBuf::from(".grok"));
+            let path = crate::grok_config::get_grok_dir();
             let exists = path.exists();
             Ok(ConfigStatus {
                 exists,
@@ -138,6 +135,12 @@ pub async fn get_config_status(
             })
         }
     }
+}
+
+/// Grok official auth status (auth.json presence only; no in-app OAuth).
+#[tauri::command]
+pub fn get_grok_auth_status() -> Result<crate::grok_config::GrokAuthStatus, String> {
+    Ok(crate::grok_config::get_grok_auth_status())
 }
 
 #[tauri::command]

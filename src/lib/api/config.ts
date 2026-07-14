@@ -3,6 +3,25 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type AppType = "claude" | "codex" | "gemini" | "omo" | "omo_slim";
 
+/** Grok official auth.json status (no in-app OAuth). */
+export interface GrokAuthStatus {
+  authenticated: boolean;
+  authPath: string;
+  authFileExists: boolean;
+  email?: string | null;
+  expiresAt?: string | null;
+  /** UI copy: e.g. 请运行 grok login */
+  loginHint: string;
+}
+
+/**
+ * Read whether `~/.grok/auth.json` exists and looks logged-in.
+ * Does not implement OAuth; guide users to run `grok login` in the CLI.
+ */
+export async function getGrokAuthStatus(): Promise<GrokAuthStatus> {
+  return invoke<GrokAuthStatus>("get_grok_auth_status");
+}
+
 /**
  * 获取 Claude 通用配置片段（已废弃，使用 getCommonConfigSnippet）
  * @returns 通用配置片段（JSON 字符串），如果不存在则返回 null
