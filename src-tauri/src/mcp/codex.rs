@@ -462,7 +462,7 @@ pub fn remove_server_from_codex(id: &str) -> Result<(), AppError> {
 /// - null
 /// - 深度嵌套对象
 /// - 混合类型数组
-fn json_value_to_toml_item(value: &Value, field_name: &str) -> Option<toml_edit::Item> {
+pub(super) fn json_value_to_toml_item(value: &Value, field_name: &str) -> Option<toml_edit::Item> {
     use toml_edit::{Array, InlineTable, Item};
 
     match value {
@@ -557,7 +557,7 @@ fn json_value_to_toml_item(value: &Value, field_name: &str) -> Option<toml_edit:
 /// 1. 核心字段（type, command, args, url, headers, env, cwd）使用强类型处理
 /// 2. 扩展字段（timeout、retry 等）通过白名单列表自动转换
 /// 3. 其他未知字段使用通用转换器尝试转换
-fn json_server_to_toml_table(spec: &Value) -> Result<toml_edit::Table, AppError> {
+pub(super) fn json_server_to_toml_table(spec: &Value) -> Result<toml_edit::Table, AppError> {
     use toml_edit::{Array, Item, Table};
 
     let mut t = Table::new();

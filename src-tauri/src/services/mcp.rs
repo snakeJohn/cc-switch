@@ -141,8 +141,7 @@ impl McpService {
                 mcp::sync_single_server_to_hermes(&Default::default(), &server.id, &server.server)?;
             }
             AppType::Grok => {
-                // P1: Grok MCP sync lands in P2
-                log::debug!("Grok MCP support not implemented yet, skipping sync");
+                mcp::sync_single_server_to_grok(&Default::default(), &server.id, &server.server)?;
             }
         }
         Ok(())
@@ -180,8 +179,7 @@ impl McpService {
                 mcp::remove_server_from_hermes(id)?;
             }
             AppType::Grok => {
-                // P1: Grok MCP remove lands in P2
-                log::debug!("Grok MCP support not implemented yet, skipping remove");
+                mcp::remove_server_from_grok(id)?;
             }
         }
         Ok(())
