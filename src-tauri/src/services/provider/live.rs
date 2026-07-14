@@ -1145,10 +1145,20 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
             log::debug!("Hermes provider '{}' written to live config", provider.id);
         }
         AppType::Grok => {
-            // P1: Grok live write lands with grok_config
+            let is_official = provider
+                .settings_config
+                .pointer("/meta/isOfficial")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+                || provider.category.as_deref() == Some("official");
+            crate::grok_config::write_grok_provider_live(
+                &provider.settings_config,
+                is_official,
+            )?;
             log::debug!(
-                "Grok live write not implemented yet, skipping provider '{}'",
-                provider.id
+                "Grok provider '{}' written to live config (official={})",
+                provider.id,
+                is_official
             );
         }
     }

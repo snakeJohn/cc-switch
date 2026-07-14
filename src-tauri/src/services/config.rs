@@ -88,6 +88,7 @@ impl ConfigService {
         Self::sync_current_provider_for_app(config, &AppType::Claude)?;
         Self::sync_current_provider_for_app(config, &AppType::Codex)?;
         Self::sync_current_provider_for_app(config, &AppType::Gemini)?;
+        Self::sync_current_provider_for_app(config, &AppType::Grok)?;
         Ok(())
     }
 
@@ -136,11 +137,25 @@ impl ConfigService {
             AppType::Hermes => {
                 // Hermes uses additive mode, no live sync needed
             }
-            AppType::Grok => {
-                // P1: Grok live sync lands with grok_config
-            }
+            AppType::Grok => Self::sync_grok_live(config, &current_id, &provider)?,
         }
 
+        Ok(())
+    }
+
+    fn sync_grok_live(
+        _config: &mut MultiAppConfig,
+        _provider_id: &str,
+        provider: &Provider,
+    ) -> Result<(), AppError> {
+        let is_official = provider
+            .settings_config
+            .pointer("/meta/isOfficial")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+            || provider.category.as_deref() == Some("official");
+
+        crate::grok_config::write_grok_provider_live(&provider.settings_config, is_official)?;
         Ok(())
     }
 

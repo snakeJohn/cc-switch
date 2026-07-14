@@ -3423,6 +3423,42 @@ impl ProviderService {
         write_gemini_live(provider)
     }
 
+    /// Whether Grok third-party settings resolve a non-empty base URL from meta or config TOML.
+    fn grok_settings_has_base_url(settings: &Value) -> bool {
+        let from_meta = |key: &str| -> bool {
+            settings
+                .get("meta")
+                .and_then(|m| m.get(key))
+                .and_then(|v| v.as_str())
+                .map(|s| !s.trim().is_empty())
+                .unwrap_or(false)
+        };
+        if from_meta("baseUrl") || from_meta("base_url") {
+            return true;
+        }
+
+        let Some(config_text) = settings.get("config").and_then(Value::as_str) else {
+            return false;
+        };
+        let config_text = config_text.trim();
+        if config_text.is_empty() {
+            return false;
+        }
+        // Mirror grok_config field extraction: require a non-empty base_url assignment
+        // under some [model.*] table (string value, not empty).
+        config_text.lines().any(|line| {
+            let line = line.trim();
+            if let Some(rest) = line.strip_prefix("base_url") {
+                let rest = rest.trim_start();
+                if let Some(rest) = rest.strip_prefix('=') {
+                    let val = rest.trim().trim_matches(|c| c == '"' || c == '\'');
+                    return !val.is_empty();
+                }
+            }
+            false
+        })
+    }
+
     fn validate_provider_settings(app_type: &AppType, provider: &Provider) -> Result<(), AppError> {
         match app_type {
             AppType::Claude => {
@@ -3514,13 +3550,38 @@ impl ProviderService {
                 }
             }
             AppType::Grok => {
-                // P1: accept any JSON object until grok_config validation lands
                 if !provider.settings_config.is_object() {
                     return Err(AppError::localized(
                         "provider.grok.settings.not_object",
                         "Grok 配置必须是 JSON 对象",
                         "Grok configuration must be a JSON object",
                     ));
+                }
+
+                let is_official = provider
+                    .settings_config
+                    .pointer("/meta/isOfficial")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                    || provider.category.as_deref() == Some("official");
+
+                // Official (OAuth/session): api_key not required.
+                // Third-party: must resolve a base URL from meta or config TOML.
+                if !is_official {
+                    let has_base_url = Self::grok_settings_has_base_url(&provider.settings_config);
+                    if !has_base_url {
+                        return Err(AppError::localized(
+                            "provider.grok.base_url.missing",
+                            format!(
+                                "供应商 {} 缺少 base_url（meta.baseUrl 或 config TOML）",
+                                provider.id
+                            ),
+                            format!(
+                                "Provider {} is missing base_url (meta.baseUrl or config TOML)",
+                                provider.id
+                            ),
+                        ));
+                    }
                 }
             }
         }
