@@ -49,6 +49,8 @@ export interface ProxyTakeoverStatus {
   opencode: boolean;
   openclaw: boolean;
   hermes: boolean;
+  /** P3: Grok 代理接管（P1 暂未实现） */
+  grok?: boolean;
 }
 
 export interface ProviderHealth {

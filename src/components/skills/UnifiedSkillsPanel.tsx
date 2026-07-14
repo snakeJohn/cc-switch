@@ -122,6 +122,8 @@ const UnifiedSkillsPanel = React.forwardRef<
       opencode: 0,
       openclaw: 0,
       hermes: 0,
+      // P1: not in SKILLS_APP_IDS yet; keep key for AppId indexing
+      grok: 0,
     };
     if (!skills) return counts;
     skills.forEach((skill) => {

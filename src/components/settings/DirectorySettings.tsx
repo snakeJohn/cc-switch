@@ -20,6 +20,7 @@ interface DirectorySettingsProps {
   opencodeDir?: string;
   openclawDir?: string;
   hermesDir?: string;
+  grokDir?: string;
   onDirectoryChange: (app: DirectoryAppId, value?: string) => void;
   onBrowseDirectory: (app: DirectoryAppId) => Promise<void>;
   onResetDirectory: (app: DirectoryAppId) => Promise<void>;
@@ -37,6 +38,7 @@ export function DirectorySettings({
   opencodeDir,
   openclawDir,
   hermesDir,
+  grokDir,
   onDirectoryChange,
   onBrowseDirectory,
   onResetDirectory,
@@ -157,6 +159,17 @@ export function DirectorySettings({
           onChange={(val) => onDirectoryChange("hermes", val)}
           onBrowse={() => onBrowseDirectory("hermes")}
           onReset={() => onResetDirectory("hermes")}
+        />
+
+        <DirectoryInput
+          label={t("settings.grokConfigDir")}
+          description={undefined}
+          value={grokDir}
+          resolvedValue={resolvedDirs.grok}
+          placeholder={t("settings.browsePlaceholderGrok")}
+          onChange={(val) => onDirectoryChange("grok", val)}
+          onBrowse={() => onBrowseDirectory("grok")}
+          onReset={() => onResetDirectory("grok")}
         />
       </section>
     </div>

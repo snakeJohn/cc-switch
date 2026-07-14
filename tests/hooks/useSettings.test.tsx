@@ -462,6 +462,7 @@ describe("useSettings hook", () => {
       opencode: "/server/opencode",
       openclaw: "/server/openclaw",
       hermes: undefined,
+      grok: undefined,
     });
     expect(metadataMock.setRequiresRestart).toHaveBeenCalledWith(false);
   });

@@ -9,7 +9,8 @@ export type AppType =
   | "gemini"
   | "opencode"
   | "openclaw"
-  | "hermes";
+  | "hermes"
+  | "grok";
 
 /** Skill 应用启用状态 */
 export interface SkillApps {
@@ -20,6 +21,8 @@ export interface SkillApps {
   opencode: boolean;
   openclaw: boolean;
   hermes: boolean;
+  /** P2: Grok Skills 同步（P1 暂不在 Skills 面板展示） */
+  grok?: boolean;
 }
 
 /** 已安装的 Skill（v3.10.0+ 统一结构） */
