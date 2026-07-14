@@ -1,0 +1,12 @@
+[2026/7/14 18:58:43] [Log] [&#128737;&#65039; fsHook] 程序试图 fs.readFile J:\Typora\resources\locales\zh-Hans.lproj\Panel.json
+------------------
+[2026/7/14 18:59:10] [Log] [&#128737;&#65039; fsHook] 程序试图 fs.stat C:\Users\18888\AppData\Roaming\Typora\draftsRecover
+------------------
+[2026/7/14 18:59:22] [Log] [&#128064;electron.net Request] POST https://cognito-identity.us-west-2.amazonaws.com/
+------------------
+[2026/7/14 18:59:22] [Log] request.url typeof: string value: https://cognito-identity.us-west-2.amazonaws.com/
+------------------
+[2026/7/14 18:59:22] [Log] [&#128737;&#65039; fsHook] 程序试图 fs.statSync C:\Users\18888\AppData\Roaming\Typora\backups
+------------------
+[2026/7/14 18:59:22] [Log] [&#128737;&#65039; fsHook] 程序试图 fs.statSync C:\Users\18888\AppData\Roaming\Typora/typora.log
+------------------
