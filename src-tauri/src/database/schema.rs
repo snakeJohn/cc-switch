@@ -66,7 +66,8 @@ impl Database {
             description TEXT, homepage TEXT, docs TEXT, tags TEXT NOT NULL DEFAULT '[]',
             enabled_claude BOOLEAN NOT NULL DEFAULT 0, enabled_codex BOOLEAN NOT NULL DEFAULT 0,
             enabled_gemini BOOLEAN NOT NULL DEFAULT 0, enabled_opencode BOOLEAN NOT NULL DEFAULT 0,
-            enabled_hermes BOOLEAN NOT NULL DEFAULT 0
+            enabled_hermes BOOLEAN NOT NULL DEFAULT 0,
+            enabled_grok BOOLEAN NOT NULL DEFAULT 0
         )",
             [],
         )
@@ -484,6 +485,11 @@ impl Database {
                         log::info!("迁移数据库从 v12 到 v13（记录输入 token 缓存语义）");
                         Self::migrate_v12_to_v13(conn)?;
                         Self::set_user_version(conn, 13)?;
+                    }
+                    13 => {
+                        log::info!("迁移数据库从 v13 到 v14（添加 Grok MCP 支持）");
+                        Self::migrate_v13_to_v14(conn)?;
+                        Self::set_user_version(conn, 14)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1351,6 +1357,22 @@ impl Database {
                 "INTEGER NOT NULL DEFAULT 0",
             )?;
         }
+        Ok(())
+    }
+
+    /// v13 -> v14：MCP 服务器启用状态增加 Grok（`apps.grok` / `enabled_grok`）。
+    ///
+    /// Skills 的 Grok 列留给 Task 8；此处仅 MCP SSOT。
+    fn migrate_v13_to_v14(conn: &Connection) -> Result<(), AppError> {
+        if Self::table_exists(conn, "mcp_servers")? {
+            Self::add_column_if_missing(
+                conn,
+                "mcp_servers",
+                "enabled_grok",
+                "BOOLEAN NOT NULL DEFAULT 0",
+            )?;
+        }
+        log::info!("v13 -> v14 迁移完成：已添加 Grok MCP 支持");
         Ok(())
     }
 
@@ -2766,7 +2788,7 @@ mod tests {
 
         Database::apply_schema_migrations_on_conn(&conn)?;
 
-        assert_eq!(Database::get_user_version(&conn)?, 13);
+        assert_eq!(Database::get_user_version(&conn)?, SCHEMA_VERSION);
         assert!(Database::has_column(
             &conn,
             "proxy_request_logs",
@@ -2784,6 +2806,32 @@ mod tests {
             |row| row.get(0),
         )?;
         assert_eq!(log_default, 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn migrate_v13_to_v14_adds_enabled_grok_column() -> Result<(), AppError> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            "CREATE TABLE mcp_servers (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                server_config TEXT NOT NULL,
+                enabled_claude BOOLEAN NOT NULL DEFAULT 0,
+                enabled_codex BOOLEAN NOT NULL DEFAULT 0,
+                enabled_gemini BOOLEAN NOT NULL DEFAULT 0,
+                enabled_opencode BOOLEAN NOT NULL DEFAULT 0,
+                enabled_hermes BOOLEAN NOT NULL DEFAULT 0
+            )",
+            [],
+        )?;
+        Database::set_user_version(&conn, 13)?;
+
+        Database::apply_schema_migrations_on_conn(&conn)?;
+
+        assert_eq!(Database::get_user_version(&conn)?, SCHEMA_VERSION);
+        assert!(Database::has_column(&conn, "mcp_servers", "enabled_grok")?);
 
         Ok(())
     }

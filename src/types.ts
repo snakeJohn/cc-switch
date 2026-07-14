@@ -494,8 +494,7 @@ export interface McpApps {
   opencode: boolean;
   openclaw: boolean;
   hermes: boolean;
-  /** P2: Grok MCP 同步（P1 暂不在 MCP 面板展示） */
-  grok?: boolean;
+  grok: boolean;
 }
 
 // MCP 服务器条目（v3.7.0 统一结构）
