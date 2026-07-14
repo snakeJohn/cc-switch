@@ -1053,7 +1053,14 @@
       "qiniu": "Qiniu",
       "openrouter": "OpenRouter",
       "deepseek": "DeepSeek",
-      "together": "Together AI"
+      "together": "Together AI",
+      "grokOfficial": "xAI 公式"
+    },
+    "grokApiBackendLabel": "API バックエンド",
+    "grokApiBackend": {
+      "chatCompletions": "Chat Completions",
+      "responses": "Responses",
+      "messages": "Messages"
     },
     "parameterConfig": "パラメーター設定 - {{name}} *",
     "mainModel": "メインモデル（任意）",

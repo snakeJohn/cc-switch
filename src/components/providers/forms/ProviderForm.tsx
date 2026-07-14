@@ -50,9 +50,18 @@ import {
   hermesProviderPresets,
   type HermesProviderPreset,
 } from "@/config/hermesProviderPresets";
+import {
+  generateGrokOfficialConfig,
+  generateGrokThirdPartyConfig,
+  GROK_DEFAULT_CONFIG,
+  grokProviderPresets,
+  type GrokApiBackend,
+  type GrokProviderPreset,
+} from "@/config/grokProviderPresets";
 import { OpenCodeFormFields } from "./OpenCodeFormFields";
 import { OpenClawFormFields } from "./OpenClawFormFields";
 import { HermesFormFields } from "./HermesFormFields";
+import { GrokFormFields } from "./GrokFormFields";
 import type { UniversalProviderPreset } from "@/config/universalProviderPresets";
 import {
   applyTemplateValues,
@@ -104,6 +113,7 @@ import {
   useOmoDraftState,
   useOpenclawFormState,
   useHermesFormState,
+  useGrokFormState,
   useCopilotAuth,
   useCodexOauth,
 } from "./hooks";
@@ -130,7 +140,8 @@ type PresetEntry = {
     | GeminiProviderPreset
     | OpenCodeProviderPreset
     | OpenClawProviderPreset
-    | HermesProviderPreset;
+    | HermesProviderPreset
+    | GrokProviderPreset;
 };
 
 export const normalizeCodexCatalogModelsForSave = (
@@ -389,7 +400,9 @@ function ProviderFormFull({
                 ? OPENCLAW_DEFAULT_CONFIG
                 : appId === "hermes"
                   ? HERMES_DEFAULT_CONFIG
-                  : CLAUDE_DEFAULT_CONFIG,
+                  : appId === "grok"
+                    ? GROK_DEFAULT_CONFIG
+                    : CLAUDE_DEFAULT_CONFIG,
       icon: initialData?.icon ?? "",
       iconColor: initialData?.iconColor ?? "",
     }),
@@ -691,6 +704,11 @@ function ProviderFormFull({
         id: `hermes-${index}`,
         preset,
       }));
+    } else if (appId === "grok") {
+      return grokProviderPresets.map<PresetEntry>((preset, index) => ({
+        id: `grok-${index}`,
+        preset,
+      }));
     }
     return providerPresets
       .filter((p) => !p.hidden)
@@ -897,6 +915,12 @@ function ProviderFormFull({
     data: hermesLiveProviderIds = [],
     isLoading: isHermesLiveProviderIdsLoading,
   } = useHermesLiveProviderIds(appId === "hermes");
+
+  const grokForm = useGrokFormState({
+    initialData,
+    appId,
+    onSettingsConfigChange: (config) => form.setValue("settingsConfig", config),
+  });
 
   const additiveExistingProviderKeys = useMemo(() => {
     if (appId === "opencode" && !isAnyOmoCategory) {
@@ -1238,6 +1262,21 @@ function ProviderFormFull({
             }),
           );
         }
+      } else if (appId === "grok" && !grokForm.isOfficial) {
+        if (!grokForm.baseUrl.trim()) {
+          issues.push(
+            t("providerForm.endpointRequired", {
+              defaultValue: "非官方供应商请填写 API 端点",
+            }),
+          );
+        }
+        if (!grokForm.apiKey.trim()) {
+          issues.push(
+            t("providerForm.apiKeyRequired", {
+              defaultValue: "非官方供应商请填写 API Key",
+            }),
+          );
+        }
       }
     }
 
@@ -1354,6 +1393,28 @@ function ProviderFormFull({
         }
       }
       settingsConfig = JSON.stringify(omoConfig);
+    } else if (appId === "grok") {
+      // Rebuild from form state so meta + TOML stay in sync.
+      // settingsConfig remains a single JSON object string (not double-stringified).
+      const official =
+        grokForm.isOfficial || category === "official";
+      if (official) {
+        settingsConfig = JSON.stringify(
+          generateGrokOfficialConfig(grokForm.model || "grok-build"),
+        );
+      } else {
+        settingsConfig = JSON.stringify(
+          generateGrokThirdPartyConfig({
+            displayName:
+              values.name.trim() || grokForm.displayName || "Custom",
+            model: grokForm.model || "grok-build",
+            baseUrl: grokForm.baseUrl.trim().replace(/\/+$/, ""),
+            apiKey: grokForm.apiKey,
+            apiBackend: (grokForm.apiBackend ||
+              "chat_completions") as GrokApiBackend,
+          }),
+        );
+      }
     } else {
       settingsConfig = values.settingsConfig.trim();
     }
@@ -1645,12 +1706,26 @@ function ProviderFormFull({
     formWebsiteUrl: form.watch("websiteUrl") || "",
   });
 
+  // 使用 API Key 链接 hook (Grok)
+  const {
+    shouldShowApiKeyLink: shouldShowGrokApiKeyLink,
+    websiteUrl: grokWebsiteUrl,
+    isPartner: isGrokPartner,
+    partnerPromotionKey: grokPartnerPromotionKey,
+  } = useApiKeyLink({
+    appId: "grok",
+    category,
+    selectedPresetId,
+    presetEntries,
+    formWebsiteUrl: form.watch("websiteUrl") || "",
+  });
+
   // 使用端点测速候选 hook
   const speedTestEndpoints = useSpeedTestEndpoints({
     appId,
     selectedPresetId,
     presetEntries,
-    baseUrl,
+    baseUrl: appId === "grok" ? grokForm.baseUrl : baseUrl,
     codexBaseUrl,
     initialData,
   });
@@ -1684,6 +1759,9 @@ function ProviderFormFull({
       }
       if (appId === "hermes") {
         hermesForm.resetHermesState();
+      }
+      if (appId === "grok") {
+        grokForm.resetGrokState();
       }
       return;
     }
@@ -1802,6 +1880,23 @@ function ProviderFormFull({
       const config = preset.settingsConfig;
 
       hermesForm.resetHermesState(config);
+
+      form.reset({
+        name: preset.nameKey ? t(preset.nameKey) : preset.name,
+        websiteUrl: preset.websiteUrl ?? "",
+        settingsConfig: JSON.stringify(config, null, 2),
+        icon: preset.icon ?? "",
+        iconColor: preset.iconColor ?? "",
+      });
+      return;
+    }
+
+    // Grok preset handling
+    if (appId === "grok") {
+      const preset = entry.preset as GrokProviderPreset;
+      const config = preset.settingsConfig;
+
+      grokForm.resetGrokState(config);
 
       form.reset({
         name: preset.nameKey ? t(preset.nameKey) : preset.name,
@@ -2329,6 +2424,26 @@ function ProviderFormFull({
             />
           )}
 
+          {/* Grok Build 专属字段 */}
+          {appId === "grok" && (
+            <GrokFormFields
+              isOfficial={grokForm.isOfficial || category === "official"}
+              baseUrl={grokForm.baseUrl}
+              onBaseUrlChange={grokForm.handleBaseUrlChange}
+              apiKey={grokForm.apiKey}
+              onApiKeyChange={grokForm.handleApiKeyChange}
+              model={grokForm.model}
+              onModelChange={grokForm.handleModelChange}
+              apiBackend={grokForm.apiBackend}
+              onApiBackendChange={grokForm.handleApiBackendChange}
+              category={category}
+              shouldShowApiKeyLink={shouldShowGrokApiKeyLink}
+              websiteUrl={grokWebsiteUrl}
+              isPartner={isGrokPartner}
+              partnerPromotionKey={grokPartnerPromotionKey}
+            />
+          )}
+
           {/* 配置编辑器：Codex、Claude、Gemini 分别使用不同的编辑器 */}
           {appId === "codex" ? (
             <>
@@ -2417,7 +2532,7 @@ function ProviderFormFull({
               </div>
               {settingsConfigErrorField}
             </>
-          ) : appId === "openclaw" || appId === "hermes" ? (
+          ) : appId === "openclaw" || appId === "hermes" || appId === "grok" ? (
             <>
               <div className="space-y-2">
                 <Label htmlFor="settingsConfig">
@@ -2433,7 +2548,19 @@ function ProviderFormFull({
   "base_url": "https://api.example.com/v1",
   "api_key": ""
 }`
-                      : `{
+                      : appId === "grok"
+                        ? `{
+  "auth": {},
+  "config": "[models]\\ndefault = \\"cc-switch-active\\"\\n",
+  "meta": {
+    "isOfficial": false,
+    "apiBackend": "chat_completions",
+    "model": "grok-build",
+    "baseUrl": "https://api.x.ai/v1",
+    "apiKey": ""
+  }
+}`
+                        : `{
   "baseUrl": "https://api.example.com/v1",
   "apiKey": "your-api-key-here",
   "api": "openai-completions",
@@ -2479,7 +2606,8 @@ function ProviderFormFull({
           {!isAnyOmoCategory &&
             appId !== "opencode" &&
             appId !== "openclaw" &&
-            appId !== "hermes" && (
+            appId !== "hermes" &&
+            appId !== "grok" && (
               <ProviderAdvancedConfig
                 pricingConfig={pricingConfig}
                 onPricingConfigChange={setPricingConfig}

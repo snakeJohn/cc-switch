@@ -12,7 +12,8 @@ type TemplateValueMap = Record<string, TemplateValueConfig>;
 
 interface PresetEntry {
   id: string;
-  preset: ProviderPreset | CodexProviderPreset;
+  // Caller may pass multi-app preset unions; only Claude/Codex use templateValues.
+  preset: ProviderPreset | CodexProviderPreset | { templateValues?: never };
 }
 
 interface UseTemplateValuesProps {

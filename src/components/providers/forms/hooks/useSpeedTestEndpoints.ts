@@ -2,12 +2,24 @@ import { useMemo } from "react";
 import type { AppId } from "@/lib/api";
 import type { ProviderPreset } from "@/config/claudeProviderPresets";
 import type { CodexProviderPreset } from "@/config/codexProviderPresets";
+import type { GeminiProviderPreset } from "@/config/geminiProviderPresets";
+import type { OpenCodeProviderPreset } from "@/config/opencodeProviderPresets";
+import type { OpenClawProviderPreset } from "@/config/openclawProviderPresets";
+import type { HermesProviderPreset } from "@/config/hermesProviderPresets";
+import type { GrokProviderPreset } from "@/config/grokProviderPresets";
 import type { ProviderMeta, EndpointCandidate } from "@/types";
 import { extractCodexBaseUrl } from "@/utils/providerConfigUtils";
 
 type PresetEntry = {
   id: string;
-  preset: ProviderPreset | CodexProviderPreset;
+  preset:
+    | ProviderPreset
+    | CodexProviderPreset
+    | GeminiProviderPreset
+    | OpenCodeProviderPreset
+    | OpenClawProviderPreset
+    | HermesProviderPreset
+    | GrokProviderPreset;
 };
 
 interface UseSpeedTestEndpointsProps {
@@ -155,5 +167,42 @@ export function useSpeedTestEndpoints({
     return Array.from(map.values());
   }, [appId, codexBaseUrl, initialData, selectedPresetId, presetEntries]);
 
-  return appId === "codex" ? codexEndpoints : claudeEndpoints;
+  // Grok (and similar meta.baseUrl apps): collect from form baseUrl + meta + candidates
+  const grokEndpoints = useMemo<EndpointCandidate[]>(() => {
+    if (appId !== "grok") return [];
+
+    const map = new Map<string, EndpointCandidate>();
+    const add = (url?: string, isCustom = false) => {
+      if (!url) return;
+      const sanitized = url.trim().replace(/\/+$/, "");
+      if (!sanitized || map.has(sanitized)) return;
+      map.set(sanitized, { url: sanitized, isCustom });
+    };
+
+    if (baseUrl) add(baseUrl);
+
+    const meta = initialData?.settingsConfig as
+      | { meta?: { baseUrl?: string } }
+      | undefined;
+    if (typeof meta?.meta?.baseUrl === "string") {
+      add(meta.meta.baseUrl);
+    }
+
+    if (selectedPresetId && selectedPresetId !== "custom") {
+      const entry = presetEntries.find((item) => item.id === selectedPresetId);
+      if (entry) {
+        const preset = entry.preset as GrokProviderPreset;
+        if (typeof preset.settingsConfig?.meta?.baseUrl === "string") {
+          add(preset.settingsConfig.meta.baseUrl);
+        }
+        preset.endpointCandidates?.forEach((url) => add(url));
+      }
+    }
+
+    return Array.from(map.values());
+  }, [appId, baseUrl, initialData, selectedPresetId, presetEntries]);
+
+  if (appId === "codex") return codexEndpoints;
+  if (appId === "grok") return grokEndpoints;
+  return claudeEndpoints;
 }

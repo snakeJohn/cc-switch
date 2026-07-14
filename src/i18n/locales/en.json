@@ -1053,7 +1053,14 @@
       "qiniu": "Qiniu",
       "openrouter": "OpenRouter",
       "deepseek": "DeepSeek",
-      "together": "Together AI"
+      "together": "Together AI",
+      "grokOfficial": "xAI Official"
+    },
+    "grokApiBackendLabel": "API Backend",
+    "grokApiBackend": {
+      "chatCompletions": "Chat Completions",
+      "responses": "Responses",
+      "messages": "Messages"
     },
     "parameterConfig": "Parameter Config - {{name}} *",
     "mainModel": "Main Model (optional)",
