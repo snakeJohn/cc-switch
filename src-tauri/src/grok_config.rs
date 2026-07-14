@@ -353,6 +353,222 @@ fn read_or_empty_doc(path: &Path) -> Result<DocumentMut, AppError> {
 }
 
 // ============================================================================
+// Proxy takeover helpers (P3a)
+// ============================================================================
+
+/// Placeholder written into live config while proxy owns the real upstream key.
+pub const GROK_PROXY_TOKEN_PLACEHOLDER: &str = "PROXY_MANAGED";
+
+/// Read live `config.toml` as text (empty string when missing).
+pub fn read_grok_config_text() -> Result<String, AppError> {
+    read_grok_config_text_at(&get_grok_config_path())
+}
+
+pub fn read_grok_config_text_at(path: &Path) -> Result<String, AppError> {
+    if !path.exists() {
+        return Ok(String::new());
+    }
+    fs::read_to_string(path).map_err(|e| AppError::io(path, e))
+}
+
+/// Atomically write full `config.toml` text (preserves non-managed sections).
+pub fn write_grok_config_text(text: &str) -> Result<(), AppError> {
+    write_grok_config_text_at(&get_grok_config_path(), text)
+}
+
+pub fn write_grok_config_text_at(path: &Path, text: &str) -> Result<(), AppError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| AppError::io(parent, e))?;
+    }
+    atomic_write(path, text.as_bytes())
+}
+
+/// Backup JSON shape: `{ "toml": "<full config.toml>" }`.
+pub fn live_to_backup_json() -> Result<Value, AppError> {
+    let toml = read_grok_config_text()?;
+    if toml.trim().is_empty() {
+        return Err(AppError::Config("Grok config.toml 不存在或为空".into()));
+    }
+    Ok(serde_json::json!({ "toml": toml }))
+}
+
+/// Restore live config from backup JSON produced by [`live_to_backup_json`].
+pub fn restore_from_backup_json(backup: &Value) -> Result<(), AppError> {
+    let toml = backup
+        .get("toml")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::Config("Grok 备份缺少 toml 字段".into()))?;
+    write_grok_config_text(toml)
+}
+
+/// Apply proxy takeover fields onto provider `settings_config` (mutates meta + config TOML).
+///
+/// Live projection always uses the third-party active slot so `base_url` /
+/// `api_key` can point at the local proxy. Official providers are rejected by
+/// the proxy service before calling this.
+pub fn apply_takeover_fields(settings: &mut Value, proxy_base_url: &str) {
+    let proxy_base_url = proxy_base_url.trim().trim_end_matches('/');
+
+    {
+        let Some(root) = settings.as_object_mut() else {
+            return;
+        };
+        let meta_value = root
+            .entry("meta".to_string())
+            .or_insert_with(|| serde_json::json!({}));
+        let Some(meta) = meta_value.as_object_mut() else {
+            return;
+        };
+        meta.insert("baseUrl".into(), Value::String(proxy_base_url.to_string()));
+        meta.insert(
+            "apiKey".into(),
+            Value::String(GROK_PROXY_TOKEN_PLACEHOLDER.to_string()),
+        );
+        meta.insert("isOfficial".into(), Value::Bool(false));
+        if !meta.contains_key("apiBackend") && !meta.contains_key("api_backend") {
+            meta.insert(
+                "apiBackend".into(),
+                Value::String("chat_completions".into()),
+            );
+        }
+    }
+
+    // Keep embedded config TOML in sync when present (used by some edit paths).
+    let config_text = settings
+        .get("config")
+        .and_then(|c| c.as_str())
+        .map(|s| s.to_string());
+    if let Some(config_text) = config_text {
+        if let Ok(mut doc) = config_text.parse::<DocumentMut>() {
+            if apply_provider_to_doc(&mut doc, settings, false).is_ok() {
+                if let Some(obj) = settings.as_object_mut() {
+                    obj.insert("config".into(), Value::String(doc.to_string()));
+                }
+            }
+        }
+    }
+}
+
+/// Whether live config currently has the proxy placeholder key on the active slot.
+pub fn is_live_taken_over() -> bool {
+    match read_grok_config_text() {
+        Ok(text) if !text.trim().is_empty() => is_toml_taken_over(&text),
+        _ => false,
+    }
+}
+
+pub fn is_toml_taken_over(toml_text: &str) -> bool {
+    let Ok(doc) = toml_text.parse::<DocumentMut>() else {
+        return false;
+    };
+    let Some(models) = doc.get("model").and_then(|m| m.as_table()) else {
+        return false;
+    };
+    for (_, item) in models.iter() {
+        if let Some(table) = item.as_table() {
+            if table.get("api_key").and_then(|v| v.as_str()) == Some(GROK_PROXY_TOKEN_PLACEHOLDER)
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// True when active model base_url matches `expected_proxy_base_url`.
+pub fn live_base_url_matches(expected_proxy_base_url: &str) -> bool {
+    let Ok(text) = read_grok_config_text() else {
+        return false;
+    };
+    let Ok(doc) = text.parse::<DocumentMut>() else {
+        return false;
+    };
+    let expected = expected_proxy_base_url.trim().trim_end_matches('/');
+    let Some(models) = doc.get("model").and_then(|m| m.as_table()) else {
+        return false;
+    };
+    // Prefer managed slot, then any model with proxy placeholder.
+    if let Some(active) = models
+        .get(GROK_ACTIVE_MODEL_ID)
+        .and_then(|i| i.as_table())
+    {
+        if let Some(url) = active.get("base_url").and_then(|v| v.as_str()) {
+            return url.trim().trim_end_matches('/') == expected;
+        }
+    }
+    for (_, item) in models.iter() {
+        if let Some(table) = item.as_table() {
+            if table.get("api_key").and_then(|v| v.as_str()) == Some(GROK_PROXY_TOKEN_PLACEHOLDER)
+            {
+                if let Some(url) = table.get("base_url").and_then(|v| v.as_str()) {
+                    return url.trim().trim_end_matches('/') == expected;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Remove proxy placeholder key and local proxy base_url from active model tables.
+pub fn cleanup_takeover_placeholders_in_live() -> Result<(), AppError> {
+    let path = get_grok_config_path();
+    let text = read_grok_config_text_at(&path)?;
+    if text.trim().is_empty() {
+        return Ok(());
+    }
+    let mut doc: DocumentMut = text.parse().map_err(|e| {
+        AppError::Config(format!(
+            "Failed to parse Grok config.toml at {}: {e}",
+            path.display()
+        ))
+    })?;
+
+    let mut changed = false;
+    if let Some(models) = doc.get_mut("model").and_then(|m| m.as_table_mut()) {
+        let keys: Vec<String> = models.iter().map(|(k, _)| k.to_string()).collect();
+        for key in keys {
+            let Some(table) = models.get_mut(&key).and_then(|i| i.as_table_mut()) else {
+                continue;
+            };
+            if table.get("api_key").and_then(|v| v.as_str()) == Some(GROK_PROXY_TOKEN_PLACEHOLDER)
+            {
+                table.remove("api_key");
+                changed = true;
+            }
+            if table
+                .get("base_url")
+                .and_then(|v| v.as_str())
+                .map(is_local_proxy_url)
+                .unwrap_or(false)
+            {
+                table.remove("base_url");
+                changed = true;
+            }
+        }
+    }
+
+    if changed {
+        write_grok_config_text_at(&path, &doc.to_string())?;
+    }
+    Ok(())
+}
+
+fn is_local_proxy_url(url: &str) -> bool {
+    let url = url.trim();
+    if !url.starts_with("http://") {
+        return false;
+    }
+    let rest = &url["http://".len()..];
+    rest.starts_with("127.0.0.1")
+        || rest.starts_with("localhost")
+        || rest.starts_with("0.0.0.0")
+        || rest.starts_with("[::1]")
+        || rest.starts_with("[::]")
+        || rest.starts_with("::1")
+        || rest.starts_with("::")
+}
+
+// ============================================================================
 // Backup
 // ============================================================================
 
@@ -586,6 +802,48 @@ api_backend = "chat_completions"
             doc["models"]["default"].as_str(),
             Some(GROK_OFFICIAL_DEFAULT_MODEL)
         );
+    }
+
+    #[test]
+    fn apply_takeover_fields_sets_proxy_base_and_placeholder() {
+        let mut settings = json!({
+            "auth": {},
+            "meta": {
+                "isOfficial": false,
+                "apiBackend": "responses",
+                "model": "deepseek-chat",
+                "baseUrl": "https://api.deepseek.com/v1",
+                "apiKey": "sk-real",
+                "displayName": "DeepSeek"
+            }
+        });
+        apply_takeover_fields(&mut settings, "http://127.0.0.1:15721/grok/v1");
+        assert_eq!(
+            settings["meta"]["baseUrl"].as_str(),
+            Some("http://127.0.0.1:15721/grok/v1")
+        );
+        assert_eq!(
+            settings["meta"]["apiKey"].as_str(),
+            Some(GROK_PROXY_TOKEN_PLACEHOLDER)
+        );
+        assert_eq!(settings["meta"]["isOfficial"].as_bool(), Some(false));
+    }
+
+    #[test]
+    fn is_toml_taken_over_detects_placeholder() {
+        let toml = r#"
+[model.cc-switch-active]
+base_url = "http://127.0.0.1:15721/grok/v1"
+api_key = "PROXY_MANAGED"
+model = "x"
+"#;
+        assert!(is_toml_taken_over(toml));
+        assert!(!is_toml_taken_over(
+            r#"
+[model.cc-switch-active]
+api_key = "sk-real"
+"#
+        ));
     }
 
     #[test]

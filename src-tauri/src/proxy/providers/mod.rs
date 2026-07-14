@@ -22,6 +22,7 @@ pub(crate) mod codex_responses_sse;
 pub mod copilot_auth;
 pub mod copilot_model_map;
 mod gemini;
+mod grok;
 pub(crate) mod gemini_schema;
 pub mod gemini_shadow;
 pub mod models;
@@ -196,7 +197,8 @@ impl ProviderType {
                 // These apps don't support proxy, fallback to Codex-like type
                 ProviderType::Codex
             }
-            // P1: Grok proxy lands in P3; treat like Codex for now
+            // Grok is OpenAI-compatible at the wire level (chat/responses) or
+            // Anthropic-compatible (messages); routing uses the Grok adapter.
             AppType::Grok => ProviderType::Codex,
         }
     }
@@ -252,8 +254,7 @@ pub fn get_adapter(app_type: &AppType) -> Box<dyn ProviderAdapter> {
             // These apps don't support proxy, fallback to Codex adapter
             Box::new(CodexAdapter::new())
         }
-        // P1: Grok proxy lands in P3; reuse Codex adapter for compile completeness
-        AppType::Grok => Box::new(CodexAdapter::new()),
+        AppType::Grok => Box::new(grok::GrokAdapter::new()),
     }
 }
 

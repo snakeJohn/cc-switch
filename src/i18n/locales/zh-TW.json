@@ -1444,7 +1444,8 @@
       "claude": "Claude Code",
       "codex": "Codex",
       "gemini": "Gemini",
-      "opencode": "OpenCode"
+      "opencode": "OpenCode",
+      "grok": "Grok Build"
     },
     "rawInputLabel": "原始",
     "dataSources": "資料來源",

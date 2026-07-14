@@ -38,7 +38,11 @@ export function FailoverToggle({ className, activeApp }: FailoverToggleProps) {
       ? "Claude"
       : activeApp === "codex"
         ? "Codex"
-        : "Gemini";
+        : activeApp === "gemini"
+          ? "Gemini"
+          : activeApp === "grok"
+            ? "Grok Build"
+            : activeApp;
 
   const tooltipText = !takeoverEnabled
     ? t("failover.tooltip.takeoverRequired", {

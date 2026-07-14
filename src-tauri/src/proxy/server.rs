@@ -344,6 +344,21 @@ impl ProxyServer {
                 "/codex/v1/responses/compact",
                 post(handlers::handle_responses_compact),
             )
+            // Grok Build — dedicated prefix so concurrent Codex takeover stays isolated.
+            // Live base_url is rewritten to `http://127.0.0.1:<port>/grok/v1`.
+            // Passthrough only: chat_completions / responses / messages (no format bridge).
+            .route(
+                "/grok/v1/chat/completions",
+                post(handlers::handle_grok_chat_completions),
+            )
+            .route(
+                "/grok/chat/completions",
+                post(handlers::handle_grok_chat_completions),
+            )
+            .route("/grok/v1/responses", post(handlers::handle_grok_responses))
+            .route("/grok/responses", post(handlers::handle_grok_responses))
+            .route("/grok/v1/messages", post(handlers::handle_grok_messages))
+            .route("/grok/messages", post(handlers::handle_grok_messages))
             // Gemini API (支持带前缀和不带前缀)
             //
             // 用 `any(..)` 覆盖所有 HTTP 方法：除了 POST `:generateContent` /

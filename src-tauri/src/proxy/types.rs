@@ -115,6 +115,10 @@ pub struct ProxyTakeoverStatus {
     pub gemini: bool,
     pub opencode: bool,
     pub openclaw: bool,
+    #[serde(default)]
+    pub hermes: bool,
+    #[serde(default)]
+    pub grok: bool,
 }
 
 /// API 格式类型（预留，当前不需要格式转换）
