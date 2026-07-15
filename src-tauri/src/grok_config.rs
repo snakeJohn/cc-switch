@@ -45,6 +45,19 @@ pub fn get_grok_auth_path() -> PathBuf {
     get_grok_dir().join("auth.json")
 }
 
+/// One non-secret account entry from `auth.json`.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GrokAuthAccount {
+    /// Stable map key in `auth.json` (e.g. `https://auth.x.ai::<client_id>`).
+    pub id: String,
+    pub email: Option<String>,
+    pub user_id: Option<String>,
+    pub expires_at: Option<String>,
+    /// True when this entry is treated as the active login (first valid entry).
+    pub is_active: bool,
+}
+
 /// Lightweight official-auth status (no OAuth). Never includes tokens.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,10 +68,14 @@ pub struct GrokAuthStatus {
     pub auth_path: String,
     /// Whether the auth.json file exists on disk.
     pub auth_file_exists: bool,
-    /// Optional email from the first OIDC entry (if present).
+    /// Optional email from the active OIDC entry (if present).
     pub email: Option<String>,
-    /// Optional expiry (`expires_at`) from the first entry.
+    /// Optional expiry (`expires_at`) from the active entry.
     pub expires_at: Option<String>,
+    /// Active account map key (if any).
+    pub active_account_id: Option<String>,
+    /// All accounts present in auth.json (tokens never included).
+    pub accounts: Vec<GrokAuthAccount>,
     /// Hint for UI: run CLI login locally (no in-app OAuth).
     pub login_hint: String,
 }
@@ -68,91 +85,208 @@ pub fn get_grok_auth_status() -> GrokAuthStatus {
     get_grok_auth_status_at(&get_grok_auth_path())
 }
 
+fn empty_auth_status(auth_path: String, auth_file_exists: bool) -> GrokAuthStatus {
+    GrokAuthStatus {
+        authenticated: false,
+        auth_path,
+        auth_file_exists,
+        email: None,
+        expires_at: None,
+        active_account_id: None,
+        accounts: Vec::new(),
+        login_hint: "请运行 grok login".to_string(),
+    }
+}
+
+fn entry_is_authenticated(entry: &Value) -> bool {
+    let has_key = entry
+        .get("key")
+        .and_then(|v| v.as_str())
+        .is_some_and(|s| !s.is_empty());
+    let has_refresh = entry
+        .get("refresh_token")
+        .and_then(|v| v.as_str())
+        .is_some_and(|s| !s.is_empty());
+    has_key || has_refresh
+}
+
+fn parse_accounts(value: &Value) -> Vec<GrokAuthAccount> {
+    let Some(map) = value.as_object() else {
+        return Vec::new();
+    };
+    let mut accounts = Vec::new();
+    let mut active_set = false;
+    for (id, entry) in map {
+        if !entry_is_authenticated(entry) {
+            continue;
+        }
+        let is_active = !active_set;
+        if is_active {
+            active_set = true;
+        }
+        accounts.push(GrokAuthAccount {
+            id: id.clone(),
+            email: entry
+                .get("email")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            user_id: entry
+                .get("user_id")
+                .or_else(|| entry.get("principal_id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            expires_at: entry
+                .get("expires_at")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            is_active,
+        });
+    }
+    accounts
+}
+
 /// Testable path-based status reader.
 pub fn get_grok_auth_status_at(auth_path: &Path) -> GrokAuthStatus {
     let path_str = auth_path.to_string_lossy().to_string();
-    let login_hint = "请运行 grok login".to_string();
 
     if !auth_path.is_file() {
-        return GrokAuthStatus {
-            authenticated: false,
-            auth_path: path_str,
-            auth_file_exists: false,
-            email: None,
-            expires_at: None,
-            login_hint,
-        };
+        return empty_auth_status(path_str, false);
     }
 
     let content = match fs::read_to_string(auth_path) {
         Ok(c) => c,
-        Err(_) => {
-            return GrokAuthStatus {
-                authenticated: false,
-                auth_path: path_str,
-                auth_file_exists: true,
-                email: None,
-                expires_at: None,
-                login_hint,
-            };
-        }
+        Err(_) => return empty_auth_status(path_str, true),
     };
 
     let value: Value = match serde_json::from_str(&content) {
         Ok(v) => v,
-        Err(_) => {
-            return GrokAuthStatus {
-                authenticated: false,
-                auth_path: path_str,
-                auth_file_exists: true,
-                email: None,
-                expires_at: None,
-                login_hint,
-            };
-        }
+        Err(_) => return empty_auth_status(path_str, true),
     };
 
-    let mut email = None;
-    let mut expires_at = None;
-    let mut authenticated = false;
-
-    if let Some(map) = value.as_object() {
-        for entry in map.values() {
-            let has_key = entry
-                .get("key")
-                .and_then(|v| v.as_str())
-                .is_some_and(|s| !s.is_empty());
-            let has_refresh = entry
-                .get("refresh_token")
-                .and_then(|v| v.as_str())
-                .is_some_and(|s| !s.is_empty());
-            if has_key || has_refresh {
-                authenticated = true;
-                if email.is_none() {
-                    email = entry
-                        .get("email")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                }
-                if expires_at.is_none() {
-                    expires_at = entry
-                        .get("expires_at")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                }
-                break;
-            }
-        }
-    }
+    let accounts = parse_accounts(&value);
+    let active = accounts.iter().find(|a| a.is_active);
+    let authenticated = !accounts.is_empty();
 
     GrokAuthStatus {
         authenticated,
         auth_path: path_str,
         auth_file_exists: true,
-        email,
-        expires_at,
-        login_hint,
+        email: active.and_then(|a| a.email.clone()),
+        expires_at: active.and_then(|a| a.expires_at.clone()),
+        active_account_id: active.map(|a| a.id.clone()),
+        accounts,
+        login_hint: "请运行 grok login".to_string(),
     }
+}
+
+/// Promote an existing auth.json entry to be the active account (rewrites object
+/// order so the selected key is first). Grok CLI typically uses the stored
+/// session map; putting the preferred account first is the best-effort switch
+/// without re-running OAuth in-app.
+pub fn set_active_grok_account(account_id: &str) -> Result<GrokAuthStatus, AppError> {
+    set_active_grok_account_at(&get_grok_auth_path(), account_id)
+}
+
+pub fn set_active_grok_account_at(
+    auth_path: &Path,
+    account_id: &str,
+) -> Result<GrokAuthStatus, AppError> {
+    let account_id = account_id.trim();
+    if account_id.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Grok account id must not be empty".into(),
+        ));
+    }
+    if !auth_path.is_file() {
+        return Err(AppError::Config(format!(
+            "auth.json not found: {}",
+            auth_path.display()
+        )));
+    }
+    let content = fs::read_to_string(auth_path)
+        .map_err(|e| AppError::Config(format!("read auth.json failed: {e}")))?;
+    let value: Value = serde_json::from_str(&content)
+        .map_err(|e| AppError::Config(format!("parse auth.json failed: {e}")))?;
+    let map = value
+        .as_object()
+        .ok_or_else(|| AppError::Config("auth.json root must be an object".into()))?;
+    if !map.contains_key(account_id) {
+        return Err(AppError::InvalidInput(format!(
+            "Grok account not found: {account_id}"
+        )));
+    }
+
+    let mut ordered = serde_json::Map::new();
+    if let Some(entry) = map.get(account_id) {
+        ordered.insert(account_id.to_string(), entry.clone());
+    }
+    for (k, v) in map {
+        if k != account_id {
+            ordered.insert(k.clone(), v.clone());
+        }
+    }
+    let pretty = serde_json::to_string_pretty(&Value::Object(ordered))
+        .map_err(|e| AppError::Config(format!("serialize auth.json failed: {e}")))?;
+    atomic_write(auth_path, pretty.as_bytes())?;
+    Ok(get_grok_auth_status_at(auth_path))
+}
+
+/// Remove one account entry from auth.json. If none remain, delete the file.
+pub fn remove_grok_account(account_id: &str) -> Result<GrokAuthStatus, AppError> {
+    remove_grok_account_at(&get_grok_auth_path(), account_id)
+}
+
+pub fn remove_grok_account_at(
+    auth_path: &Path,
+    account_id: &str,
+) -> Result<GrokAuthStatus, AppError> {
+    let account_id = account_id.trim();
+    if account_id.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Grok account id must not be empty".into(),
+        ));
+    }
+    if !auth_path.is_file() {
+        return Ok(empty_auth_status(
+            auth_path.to_string_lossy().to_string(),
+            false,
+        ));
+    }
+    let content = fs::read_to_string(auth_path)
+        .map_err(|e| AppError::Config(format!("read auth.json failed: {e}")))?;
+    let mut value: Value = serde_json::from_str(&content)
+        .map_err(|e| AppError::Config(format!("parse auth.json failed: {e}")))?;
+    let map = value
+        .as_object_mut()
+        .ok_or_else(|| AppError::Config("auth.json root must be an object".into()))?;
+    map.remove(account_id);
+    if map.is_empty() {
+        let _ = fs::remove_file(auth_path);
+        return Ok(empty_auth_status(
+            auth_path.to_string_lossy().to_string(),
+            false,
+        ));
+    }
+    let pretty = serde_json::to_string_pretty(&value)
+        .map_err(|e| AppError::Config(format!("serialize auth.json failed: {e}")))?;
+    atomic_write(auth_path, pretty.as_bytes())?;
+    Ok(get_grok_auth_status_at(auth_path))
+}
+
+/// Clear all Grok official credentials (`auth.json`).
+pub fn logout_grok_accounts() -> Result<GrokAuthStatus, AppError> {
+    logout_grok_accounts_at(&get_grok_auth_path())
+}
+
+pub fn logout_grok_accounts_at(auth_path: &Path) -> Result<GrokAuthStatus, AppError> {
+    if auth_path.is_file() {
+        fs::remove_file(auth_path)
+            .map_err(|e| AppError::Config(format!("remove auth.json failed: {e}")))?;
+    }
+    Ok(empty_auth_status(
+        auth_path.to_string_lossy().to_string(),
+        false,
+    ))
 }
 
 // ============================================================================
@@ -1036,6 +1170,7 @@ default = "old"
         let status = get_grok_auth_status_at(&path);
         assert!(!status.authenticated);
         assert!(!status.auth_file_exists);
+        assert!(status.accounts.is_empty());
         assert_eq!(status.login_hint, "请运行 grok login");
     }
 
@@ -1060,8 +1195,28 @@ default = "old"
         assert!(status.auth_file_exists);
         assert_eq!(status.email.as_deref(), Some("user@example.com"));
         assert_eq!(status.expires_at.as_deref(), Some("2026-07-15T04:42:19Z"));
+        assert_eq!(status.accounts.len(), 1);
+        assert!(status.accounts[0].is_active);
         let json = serde_json::to_string(&status).unwrap();
         assert!(!json.contains("secret-access-token"));
         assert!(!json.contains("secret-refresh"));
+    }
+
+    #[test]
+    fn set_active_reorders_accounts() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("auth.json");
+        fs::write(
+            &path,
+            r#"{
+              "a::1": { "key": "k1", "email": "one@x.ai" },
+              "b::2": { "key": "k2", "email": "two@x.ai" }
+            }"#,
+        )
+        .unwrap();
+        let status = set_active_grok_account_at(&path, "b::2").unwrap();
+        assert_eq!(status.active_account_id.as_deref(), Some("b::2"));
+        assert_eq!(status.email.as_deref(), Some("two@x.ai"));
+        assert_eq!(status.accounts[0].id, "b::2");
     }
 }

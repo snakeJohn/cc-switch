@@ -751,6 +751,7 @@ pub fn create_tray_menu(
                 ProfileScope::Claude => "Claude Code",
                 ProfileScope::ClaudeDesktop => "Claude Desktop",
                 ProfileScope::Codex => "Codex",
+                ProfileScope::Grok => "Grok Build",
             };
             let mut scope_builder = SubmenuBuilder::with_id(
                 app,

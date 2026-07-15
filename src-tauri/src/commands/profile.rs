@@ -46,6 +46,7 @@ pub struct CurrentProfileIds {
     pub claude: Option<String>,
     pub claude_desktop: Option<String>,
     pub codex: Option<String>,
+    pub grok: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,6 +108,10 @@ pub fn list_profiles(state: State<'_, AppState>) -> Result<ProfilesResponse, Str
         codex: state
             .db
             .get_current_profile_id(ProfileScope::Codex.as_str())
+            .map_err(|e| e.to_string())?,
+        grok: state
+            .db
+            .get_current_profile_id(ProfileScope::Grok.as_str())
             .map_err(|e| e.to_string())?,
     };
     Ok(ProfilesResponse {

@@ -1000,6 +1000,21 @@
     "grokLoginHint": "Please run grok login",
     "grokAuthLoggedIn": "Logged in",
     "grokAuthNotLoggedIn": "Not logged in",
+    "grokActiveAccount": "Active account",
+    "grokSelectAccount": "Select account",
+    "grokAccountSwitched": "Switched active account",
+    "grokAccountSwitchFailed": "Failed to switch account",
+    "grokAccountRemoved": "Account removed",
+    "grokAccountRemoveFailed": "Failed to remove account",
+    "grokLoggedOut": "Logged out of official accounts",
+    "grokLogoutFailed": "Failed to log out",
+    "grokLoginCopied": "Copied: grok login",
+    "grokAuthPathCopied": "Copied auth.json path",
+    "grokSwitchLogin": "Switch / re-login",
+    "grokLogout": "Remove current",
+    "grokLogoutAll": "Log out all",
+    "grokCopyAuthPath": "Copy auth path",
+    "grokLoginSwitchHint": "Copy and run grok login in a terminal to switch accounts. If auth.json has multiple entries, pick the active account from the dropdown above.",
     "grokApiHint": "Fill in an OpenAI-compatible endpoint; api_backend may be chat_completions / responses / messages",
     "codexOfficialNoApiKey": "Official does not require API Key, save directly",
     "codexApiKeyAutoFill": "Just fill in here, auth.json below will be auto-filled",
@@ -1486,7 +1501,8 @@
       "codex_db": "Codex DB",
       "codex_session": "Codex Session",
       "gemini_session": "Gemini Session",
-      "opencode_session": "OpenCode Session"
+      "opencode_session": "OpenCode Session",
+      "grok_session": "Grok Session"
     },
     "sessionSync": {
       "trigger": "Sync session logs",
@@ -1916,7 +1932,8 @@
     "switcherTooltip": {
       "claude": "Projects: switch the Claude Code provider / MCP / Skills / memory files in one click",
       "claude-desktop": "Projects: switch the Claude Desktop provider in one click",
-      "codex": "Projects: switch the Codex provider / MCP / Skills / memory files in one click"
+      "codex": "Projects: switch the Codex provider / MCP / Skills / memory files in one click",
+      "grok": "Projects: switch the Grok Build provider / MCP / Skills / memory files in one click"
     },
     "none": "No project",
     "searchPlaceholder": "Search projects",
@@ -1925,7 +1942,8 @@
     "createDescription": {
       "claude": "Save the current Claude Code provider, MCP, Skills and memory file as a project you can switch to later.",
       "claude-desktop": "Save the current Claude Desktop provider as a project you can switch to later.",
-      "codex": "Save the current Codex provider, MCP, Skills and memory file configuration as a project you can switch to later."
+      "codex": "Save the current Codex provider, MCP, Skills and memory file configuration as a project you can switch to later.",
+      "grok": "Save the current Grok Build provider, MCP, Skills and memory file configuration as a project you can switch to later."
     },
     "manage": "Manage projects…",
     "manageTitle": "Manage Projects",

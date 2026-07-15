@@ -35,14 +35,16 @@ pub enum ProfileScope {
     #[serde(rename = "claude-desktop")]
     ClaudeDesktop,
     Codex,
+    Grok,
 }
 
 impl ProfileScope {
     /// 全部分组（扩展新分组时同步扩展 apps/for_app 与前端 scope.ts 镜像）
-    pub const ALL: [ProfileScope; 3] = [
+    pub const ALL: [ProfileScope; 4] = [
         ProfileScope::Claude,
         ProfileScope::ClaudeDesktop,
         ProfileScope::Codex,
+        ProfileScope::Grok,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -50,6 +52,7 @@ impl ProfileScope {
             ProfileScope::Claude => "claude",
             ProfileScope::ClaudeDesktop => "claude-desktop",
             ProfileScope::Codex => "codex",
+            ProfileScope::Grok => "grok",
         }
     }
 
@@ -58,6 +61,7 @@ impl ProfileScope {
             "claude" => Ok(ProfileScope::Claude),
             "claude-desktop" => Ok(ProfileScope::ClaudeDesktop),
             "codex" => Ok(ProfileScope::Codex),
+            "grok" | "grok-build" => Ok(ProfileScope::Grok),
             other => Err(AppError::InvalidInput(format!(
                 "Unknown profile scope: {other}"
             ))),
@@ -70,6 +74,7 @@ impl ProfileScope {
             ProfileScope::Claude => &[AppType::Claude],
             ProfileScope::ClaudeDesktop => &[AppType::ClaudeDesktop],
             ProfileScope::Codex => &[AppType::Codex],
+            ProfileScope::Grok => &[AppType::Grok],
         }
     }
 
@@ -79,6 +84,7 @@ impl ProfileScope {
             AppType::Claude => Some(ProfileScope::Claude),
             AppType::ClaudeDesktop => Some(ProfileScope::ClaudeDesktop),
             AppType::Codex => Some(ProfileScope::Codex),
+            AppType::Grok => Some(ProfileScope::Grok),
             _ => None,
         }
     }
@@ -92,6 +98,7 @@ pub struct PerApp<T> {
     #[serde(rename = "claude-desktop")]
     pub claude_desktop: T,
     pub codex: T,
+    pub grok: T,
 }
 
 impl<T> PerApp<T> {
@@ -100,6 +107,7 @@ impl<T> PerApp<T> {
             AppType::Claude => Some(&self.claude),
             AppType::ClaudeDesktop => Some(&self.claude_desktop),
             AppType::Codex => Some(&self.codex),
+            AppType::Grok => Some(&self.grok),
             _ => None,
         }
     }
@@ -109,6 +117,7 @@ impl<T> PerApp<T> {
             AppType::Claude => Some(&mut self.claude),
             AppType::ClaudeDesktop => Some(&mut self.claude_desktop),
             AppType::Codex => Some(&mut self.codex),
+            AppType::Grok => Some(&mut self.grok),
             _ => None,
         }
     }
@@ -480,21 +489,25 @@ mod tests {
                 claude: Some("p1".into()),
                 claude_desktop: Some("d1".into()),
                 codex: None,
+                grok: None,
             },
             mcp: PerApp {
                 claude: Some(ids(&["m1", "m2"])),
                 claude_desktop: Some(vec![]),
                 codex: None,
+                grok: None,
             },
             skills: PerApp {
                 claude: Some(vec![]),
                 claude_desktop: Some(vec![]),
                 codex: Some(ids(&["s1"])),
+                grok: None,
             },
             prompts: PerApp {
                 claude: None,
                 claude_desktop: None,
                 codex: Some("pr1".into()),
+                grok: None,
             },
         };
         let json = serde_json::to_string(&payload).unwrap();
@@ -533,11 +546,13 @@ mod tests {
                 claude: Some("p1".into()),
                 claude_desktop: Some("d1".into()),
                 codex: Some("c1".into()),
+                grok: None,
             },
             mcp: PerApp {
                 claude: Some(ids(&["m1"])),
                 claude_desktop: Some(vec![]),
                 codex: Some(ids(&["m9"])),
+                grok: None,
             },
             ..Default::default()
         };
@@ -547,11 +562,13 @@ mod tests {
                 claude: Some("p2".into()),
                 claude_desktop: None,
                 codex: Some("SHOULD-NOT-LEAK".into()),
+                grok: None,
             },
             mcp: PerApp {
                 claude: Some(ids(&["m2"])),
                 claude_desktop: Some(vec![]),
                 codex: None,
+                grok: None,
             },
             ..Default::default()
         };
@@ -595,6 +612,7 @@ mod tests {
         assert!(per.get(&AppType::Claude).is_some());
         assert!(per.get(&AppType::ClaudeDesktop).is_some());
         assert!(per.get(&AppType::Codex).is_some());
+        assert!(per.get(&AppType::Grok).is_some());
         assert!(per.get(&AppType::Gemini).is_none());
     }
 
@@ -622,6 +640,7 @@ mod tests {
             &[AppType::ClaudeDesktop]
         );
         assert_eq!(ProfileScope::Codex.apps(), &[AppType::Codex]);
+        assert_eq!(ProfileScope::Grok.apps(), &[AppType::Grok]);
         for scope in ProfileScope::ALL {
             for app in scope.apps() {
                 assert_eq!(ProfileScope::for_app(app), Some(scope));

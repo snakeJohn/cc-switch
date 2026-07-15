@@ -1000,6 +1000,21 @@
     "grokLoginHint": "grok login を実行してください",
     "grokAuthLoggedIn": "ログイン済み",
     "grokAuthNotLoggedIn": "未ログイン",
+    "grokActiveAccount": "アクティブアカウント",
+    "grokSelectAccount": "アカウントを選択",
+    "grokAccountSwitched": "アクティブアカウントを切り替えました",
+    "grokAccountSwitchFailed": "アカウントの切り替えに失敗しました",
+    "grokAccountRemoved": "アカウントを削除しました",
+    "grokAccountRemoveFailed": "アカウントの削除に失敗しました",
+    "grokLoggedOut": "公式ログインを終了しました",
+    "grokLogoutFailed": "ログアウトに失敗しました",
+    "grokLoginCopied": "コピーしました：grok login",
+    "grokAuthPathCopied": "auth.json のパスをコピーしました",
+    "grokSwitchLogin": "切り替え / 再ログイン",
+    "grokLogout": "現在を削除",
+    "grokLogoutAll": "すべてログアウト",
+    "grokCopyAuthPath": "auth パスをコピー",
+    "grokLoginSwitchHint": "コピーしてターミナルで grok login を実行すると別アカウントに切り替えできます。auth.json に複数エントリがある場合は上のドロップダウンでアクティブアカウントを選択できます。",
     "grokApiHint": "OpenAI 互換エンドポイントを入力；api_backend は chat_completions / responses / messages を選択可能",
     "codexOfficialNoApiKey": "公式は API Key 不要です。そのまま保存してください",
     "codexApiKeyAutoFill": "ここに入力すれば auth.json も自動で埋まります",
@@ -1486,7 +1501,8 @@
       "codex_db": "Codex DB",
       "codex_session": "Codex セッション",
       "gemini_session": "Gemini セッション",
-      "opencode_session": "OpenCode セッション"
+      "opencode_session": "OpenCode セッション",
+      "grok_session": "Grok セッション"
     },
     "sessionSync": {
       "trigger": "セッションログを同期",
@@ -1916,7 +1932,8 @@
     "switcherTooltip": {
       "claude": "プロジェクト：Claude Code のプロバイダー / MCP / Skills / メモリファイルをワンクリックで切り替え",
       "claude-desktop": "プロジェクト：Claude Desktop のプロバイダーをワンクリックで切り替え",
-      "codex": "プロジェクト：Codex のプロバイダー / MCP / Skills / メモリファイルをワンクリックで切り替え"
+      "codex": "プロジェクト：Codex のプロバイダー / MCP / Skills / メモリファイルをワンクリックで切り替え",
+      "grok": "プロジェクト：Grok Build のプロバイダー / MCP / Skills / メモリファイルをワンクリックで切り替え"
     },
     "none": "プロジェクトを使用しない",
     "searchPlaceholder": "プロジェクトを検索",
@@ -1925,7 +1942,8 @@
     "createDescription": {
       "claude": "Claude Code の現在のプロバイダー、MCP、Skills、メモリファイルをプロジェクトとして保存し、後からワンクリックで切り替えられます。",
       "claude-desktop": "Claude Desktop の現在のプロバイダーをプロジェクトとして保存し、後からワンクリックで切り替えられます。",
-      "codex": "Codex の現在のプロバイダー、MCP、Skills、メモリファイルの設定をプロジェクトとして保存し、後からワンクリックで切り替えられます。"
+      "codex": "Codex の現在のプロバイダー、MCP、Skills、メモリファイルの設定をプロジェクトとして保存し、後からワンクリックで切り替えられます。",
+      "grok": "Grok Build の現在のプロバイダー、MCP、Skills、メモリファイルの設定をプロジェクトとして保存し、後からワンクリックで切り替えられます。"
     },
     "manage": "プロジェクトを管理…",
     "manageTitle": "プロジェクト管理",

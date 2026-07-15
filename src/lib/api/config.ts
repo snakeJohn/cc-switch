@@ -3,6 +3,15 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type AppType = "claude" | "codex" | "gemini" | "omo" | "omo_slim";
 
+/** One Grok official account entry (tokens never returned). */
+export interface GrokAuthAccount {
+  id: string;
+  email?: string | null;
+  userId?: string | null;
+  expiresAt?: string | null;
+  isActive: boolean;
+}
+
 /** Grok official auth.json status (no in-app OAuth). */
 export interface GrokAuthStatus {
   authenticated: boolean;
@@ -10,6 +19,8 @@ export interface GrokAuthStatus {
   authFileExists: boolean;
   email?: string | null;
   expiresAt?: string | null;
+  activeAccountId?: string | null;
+  accounts?: GrokAuthAccount[];
   /** UI copy: e.g. 请运行 grok login */
   loginHint: string;
 }
@@ -20,6 +31,25 @@ export interface GrokAuthStatus {
  */
 export async function getGrokAuthStatus(): Promise<GrokAuthStatus> {
   return invoke<GrokAuthStatus>("get_grok_auth_status");
+}
+
+/** Prefer an existing auth.json account as the active login. */
+export async function setActiveGrokAccount(
+  accountId: string,
+): Promise<GrokAuthStatus> {
+  return invoke<GrokAuthStatus>("set_active_grok_account", { accountId });
+}
+
+/** Remove one account entry from auth.json. */
+export async function removeGrokAccount(
+  accountId: string,
+): Promise<GrokAuthStatus> {
+  return invoke<GrokAuthStatus>("remove_grok_account", { accountId });
+}
+
+/** Clear all Grok official credentials. */
+export async function logoutGrokAccounts(): Promise<GrokAuthStatus> {
+  return invoke<GrokAuthStatus>("logout_grok_accounts");
 }
 
 /**

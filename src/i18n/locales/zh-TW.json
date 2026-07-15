@@ -971,6 +971,21 @@
     "grokLoginHint": "請執行 grok login",
     "grokAuthLoggedIn": "已登入",
     "grokAuthNotLoggedIn": "未登入",
+    "grokActiveAccount": "目前帳號",
+    "grokSelectAccount": "選擇帳號",
+    "grokAccountSwitched": "已切換活躍帳號",
+    "grokAccountSwitchFailed": "切換帳號失敗",
+    "grokAccountRemoved": "帳號已移除",
+    "grokAccountRemoveFailed": "移除帳號失敗",
+    "grokLoggedOut": "已退出官方登入",
+    "grokLogoutFailed": "退出登入失敗",
+    "grokLoginCopied": "已複製：grok login",
+    "grokAuthPathCopied": "已複製 auth.json 路徑",
+    "grokSwitchLogin": "切換/重新登入",
+    "grokLogout": "退出目前",
+    "grokLogoutAll": "退出全部",
+    "grokCopyAuthPath": "複製 auth 路徑",
+    "grokLoginSwitchHint": "複製後在終端機執行 grok login 可切換到其他帳號；若 auth.json 中有多個項目，可在上方下拉選單切換活躍帳號。",
     "grokApiHint": "填寫 OpenAI 相容端點；api_backend 可選 chat_completions / responses / messages",
     "codexOfficialNoApiKey": "官方無需填寫 API Key，直接儲存即可",
     "codexApiKeyAutoFill": "只需要填這裡，下方 auth.json 會自動填寫",
@@ -1458,7 +1473,8 @@
       "codex_db": "Codex 資料庫",
       "codex_session": "Codex 工作階段日誌",
       "gemini_session": "Gemini 工作階段日誌",
-      "opencode_session": "OpenCode 工作階段日誌"
+      "opencode_session": "OpenCode 工作階段日誌",
+      "grok_session": "Grok 工作階段日誌"
     },
     "sessionSync": {
       "trigger": "同步工作階段日誌",
@@ -1888,7 +1904,8 @@
     "switcherTooltip": {
       "claude": "專案：一鍵切換 Claude Code 的供應商 / MCP / Skills / 記憶檔案",
       "claude-desktop": "專案：一鍵切換 Claude Desktop 的供應商",
-      "codex": "專案：一鍵切換 Codex 的供應商 / MCP / Skills / 記憶檔案"
+      "codex": "專案：一鍵切換 Codex 的供應商 / MCP / Skills / 記憶檔案",
+      "grok": "專案：一鍵切換 Grok Build 的供應商 / MCP / Skills / 記憶檔案"
     },
     "none": "不使用專案",
     "searchPlaceholder": "搜尋專案",
@@ -1897,7 +1914,8 @@
     "createDescription": {
       "claude": "把 Claude Code 目前的供應商、MCP、Skills、記憶檔案儲存為一個專案，之後可一鍵切換。",
       "claude-desktop": "把 Claude Desktop 目前的供應商儲存為一個專案，之後可一鍵切換。",
-      "codex": "把 Codex 目前的供應商、MCP、Skills 和記憶檔案設定儲存為一個專案，之後可一鍵切換。"
+      "codex": "把 Codex 目前的供應商、MCP、Skills 和記憶檔案設定儲存為一個專案，之後可一鍵切換。",
+      "grok": "把 Grok Build 目前的供應商、MCP、Skills 和記憶檔案設定儲存為一個專案，之後可一鍵切換。"
     },
     "manage": "管理專案…",
     "manageTitle": "管理專案",

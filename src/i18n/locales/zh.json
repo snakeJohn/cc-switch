@@ -1000,6 +1000,21 @@
     "grokLoginHint": "请运行 grok login",
     "grokAuthLoggedIn": "已登录",
     "grokAuthNotLoggedIn": "未登录",
+    "grokActiveAccount": "当前账号",
+    "grokSelectAccount": "选择账号",
+    "grokAccountSwitched": "已切换活跃账号",
+    "grokAccountSwitchFailed": "切换账号失败",
+    "grokAccountRemoved": "账号已移除",
+    "grokAccountRemoveFailed": "移除账号失败",
+    "grokLoggedOut": "已退出官方登录",
+    "grokLogoutFailed": "退出登录失败",
+    "grokLoginCopied": "已复制：grok login",
+    "grokAuthPathCopied": "已复制 auth.json 路径",
+    "grokSwitchLogin": "切换/重新登录",
+    "grokLogout": "退出当前",
+    "grokLogoutAll": "退出全部",
+    "grokCopyAuthPath": "复制 auth 路径",
+    "grokLoginSwitchHint": "复制后在终端执行 grok login 可切换到其他账号；若 auth.json 中有多个条目，可在上方下拉框切换活跃账号。",
     "grokApiHint": "填写 OpenAI 兼容端点；api_backend 可选 chat_completions / responses / messages",
     "codexOfficialNoApiKey": "官方无需填写 API Key，直接保存即可",
     "codexApiKeyAutoFill": "只需要填这里，下方 auth.json 会自动填充",
@@ -1486,7 +1501,8 @@
       "codex_db": "Codex 数据库",
       "codex_session": "Codex 会话日志",
       "gemini_session": "Gemini 会话日志",
-      "opencode_session": "OpenCode 会话日志"
+      "opencode_session": "OpenCode 会话日志",
+      "grok_session": "Grok 会话日志"
     },
     "sessionSync": {
       "trigger": "同步会话日志",
@@ -1916,7 +1932,8 @@
     "switcherTooltip": {
       "claude": "项目：一键切换 Claude Code 的供应商 / MCP / Skills / 记忆文件",
       "claude-desktop": "项目：一键切换 Claude Desktop 的供应商",
-      "codex": "项目：一键切换 Codex 的供应商 / MCP / Skills / 记忆文件"
+      "codex": "项目：一键切换 Codex 的供应商 / MCP / Skills / 记忆文件",
+      "grok": "项目：一键切换 Grok Build 的供应商 / MCP / Skills / 记忆文件"
     },
     "none": "不使用项目",
     "searchPlaceholder": "搜索项目",
@@ -1925,7 +1942,8 @@
     "createDescription": {
       "claude": "把 Claude Code 当前的供应商、MCP、Skills、记忆文件保存为一个项目，之后可一键切换。",
       "claude-desktop": "把 Claude Desktop 当前的供应商保存为一个项目，之后可一键切换。",
-      "codex": "把 Codex 当前的供应商、MCP、Skills 和记忆文件配置保存为一个项目，之后可一键切换。"
+      "codex": "把 Codex 当前的供应商、MCP、Skills 和记忆文件配置保存为一个项目，之后可一键切换。",
+      "grok": "把 Grok Build 当前的供应商、MCP、Skills 和记忆文件配置保存为一个项目，之后可一键切换。"
     },
     "manage": "管理项目…",
     "manageTitle": "管理项目",

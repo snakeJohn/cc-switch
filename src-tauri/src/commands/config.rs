@@ -143,6 +143,28 @@ pub fn get_grok_auth_status() -> Result<crate::grok_config::GrokAuthStatus, Stri
     Ok(crate::grok_config::get_grok_auth_status())
 }
 
+/// Prefer an existing auth.json account entry (best-effort active switch).
+#[tauri::command]
+pub fn set_active_grok_account(
+    accountId: String,
+) -> Result<crate::grok_config::GrokAuthStatus, String> {
+    crate::grok_config::set_active_grok_account(&accountId).map_err(|e| e.to_string())
+}
+
+/// Remove one Grok official account from auth.json.
+#[tauri::command]
+pub fn remove_grok_account(
+    accountId: String,
+) -> Result<crate::grok_config::GrokAuthStatus, String> {
+    crate::grok_config::remove_grok_account(&accountId).map_err(|e| e.to_string())
+}
+
+/// Clear all Grok official credentials.
+#[tauri::command]
+pub fn logout_grok_accounts() -> Result<crate::grok_config::GrokAuthStatus, String> {
+    crate::grok_config::logout_grok_accounts().map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn get_claude_code_config_path() -> Result<String, String> {
     Ok(get_claude_settings_path().to_string_lossy().to_string())
